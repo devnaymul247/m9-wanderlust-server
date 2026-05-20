@@ -33,7 +33,7 @@ const client = new MongoClient(uri, {
 
 //JSON Web Key Set
 const JWKS = createRemoteJWKSet(
-    new URL('http://localhost:3000/api/auth/jwks')
+    new URL(`${process.env.CLIENT_URL}/api/auth/jwks`)
 );
 
 //middleware
@@ -67,11 +67,16 @@ const verifyToken = async (req, res, next) => {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const db = client.db("wanderlust");
     const destinationsCollection = db.collection("destinations");
     const bookingsCollection = db.collection("bookings");
+
+    app.get("/featured", async (req, res) => {
+      const result = await destinationsCollection.find().limit(4).toArray()
+      res.json(result)
+    })
 
     app.get('/destination', async (req, res) => {
         const destinations = await destinationsCollection.find().toArray();
@@ -115,14 +120,14 @@ async function run() {
         res.json(result); // Send the result of the deletion back to the client
     });
 
-    app.post('/antor', async (req, res) => {
+    app.post('/destination', async (req, res) => {
         const destinationData = req.body; // Assuming the destination data is sent in the request body
         // console.log(destinationData); // it will show in the terminal**
         const result = await destinationsCollection.insertOne(destinationData);
         res.json(result); // Send the result of the insertion back to the client
     });
 
-    app.post('/booking', async (req, res) => {
+    app.post('/booking', verifyToken, async (req, res) => {
         const bookingData = req.body; // Assuming the booking data is sent in the request body
         const result = await bookingsCollection.insertOne(bookingData);
         res.json(result); // Send the result of the insertion back to the client
@@ -133,8 +138,8 @@ async function run() {
 
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    // await client.db("admin").command({ ping: 1 });
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
   } finally {
     // Ensures that the client will close when you finish/error
